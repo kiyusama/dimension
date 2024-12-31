@@ -3,10 +3,13 @@ use tokio::time::{sleep, Duration};
 const WIDTH: usize = 99;
 const HEIGHT: usize = 31;
 
-const Z_NEAR: f32 = 10.0;
-const Z_FAR: f32 = 50.0;
+const Z_NEAR: f32 = -1.0;
+const Z_FAR: f32 = -200.0;
+const DISTANCE_CAM: f32 = 100.0;
 
-const ROTATE_SPEED: f32 = 0.05;
+const ROTATE_SPEED_X: f32 = 0.1;
+const ROTATE_SPEED_Y: f32 = 0.15;
+const ROTATE_SPEED_Z: f32 = 0.2;
 
 #[tokio::main]
 async fn main() {
@@ -14,11 +17,12 @@ async fn main() {
     let mut y_rad = 0.0;
     let mut z_rad = 0.0;
 
-    let mut grid: [[char; HEIGHT]; WIDTH] = [[' '; HEIGHT]; WIDTH];
-
-    print!("\x1b[2J"); // 画面をクリア
+    // print!("\x1b[2J"); // 画面をクリア
     loop {
-        update_grid(&mut grid, x_rad, y_rad, z_rad);
+        let mut grid: [[char; WIDTH]; HEIGHT] = [[' '; WIDTH]; HEIGHT];
+        let mut z_buffer: [[f32; WIDTH]; HEIGHT] = [[10.0; WIDTH]; HEIGHT];
+
+        update_grid(&mut grid, &mut z_buffer, x_rad, y_rad, z_rad);
 
         // 文字列の領域をあらかじめ確保
         let mut frame_image = String::with_capacity(WIDTH * HEIGHT * 4);
@@ -30,35 +34,41 @@ async fn main() {
         }
         print!("\x1b[H{}", frame_image); // 左上端に
 
-        x_rad += ROTATE_SPEED;
-        y_rad += ROTATE_SPEED;
-        z_rad += ROTATE_SPEED;
+        x_rad += ROTATE_SPEED_X;
+        y_rad += ROTATE_SPEED_Y;
+        z_rad += ROTATE_SPEED_Z;
 
-        sleep(Duration::from_secs(1)).await;
+        sleep(Duration::from_secs_f32(0.05)).await;
     }
 }
 
-fn update_grid(grid: &mut [[char; HEIGHT]; WIDTH], x_rad: f32, y_rad: f32, z_rad: f32) {
-    let mut x = 0.0;
-    let mut y = 0.0;
-    let mut z = 0.0;
-    let mut x_screen;
-    let mut y_screen;
+fn update_grid(
+    grid: &mut [[char; WIDTH]; HEIGHT],
+    z_buffer: &mut [[f32; WIDTH]; HEIGHT],
+    x_rad: f32,
+    y_rad: f32,
+    z_rad: f32,
+) {
+    let mut i = -99.5;
+    while i <= 99.5 {
+        let x = i;
+        let y = 0.0;
+        let z = 0.0;
 
-    let mut i = -10.0;
-    while i <= 10.0 {
-        x = i;
+        let x_rotated = rotate_x(x, y, z, x_rad, y_rad, z_rad);
+        let y_rotated = rotate_y(x, y, z, x_rad, y_rad, z_rad);
+        let z_rotated = rotate_z(x, y, z, x_rad, y_rad) - DISTANCE_CAM;
 
-        x = rotate_x(x, y, z, x_rad, y_rad, z_rad);
-        y = rotate_y(x, y, z, x_rad, y_rad, z_rad);
-        z = rotate_z(x, y, z, x_rad, y_rad);
+        let x_screen = to_x_screen(x_rotated, z_rotated) as usize;
+        let y_screen = to_y_screen(y_rotated, z_rotated) as usize;
+        let depth = to_z_buffer(z_rotated);
 
-        x_screen = to_x_screen(x, z);
-        y_screen = to_y_screen(y, z);
+        if depth < z_buffer[y_screen][x_screen] {
+            z_buffer[y_screen][x_screen] = depth;
+            grid[y_screen][x_screen] = '@';
+        }
 
-        to_z_buffer(z);
-
-        i += 0.1;
+        i += 0.001;
     }
 }
 
@@ -92,6 +102,7 @@ fn to_y_screen(y: f32, z: f32) -> f32 {
     return (HEIGHT as f32 + (2.0 * Z_NEAR / z) * y) / 2.0;
 }
 
+// 深度バッファを計算
 fn to_z_buffer(z: f32) -> f32 {
     return (Z_FAR * z - Z_FAR * Z_NEAR) / ((Z_FAR - Z_NEAR) * z);
 }
