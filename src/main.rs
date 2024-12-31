@@ -4,12 +4,12 @@ const WIDTH: usize = 99;
 const HEIGHT: usize = 31;
 
 const Z_NEAR: f32 = -30.0;
-const Z_FAR: f32 = -200.0;
-const DISTANCE_CAM: f32 = 100.0;
+const Z_FAR: f32 = -300.0;
+const DISTANCE_CAM: f32 = 150.0;
 
-const ROTATE_SPEED_X: f32 = 0.1;
-const ROTATE_SPEED_Y: f32 = 0.15;
-const ROTATE_SPEED_Z: f32 = 0.2;
+const ROTATE_SPEED_X: f32 = 0.03;
+const ROTATE_SPEED_Y: f32 = 0.02;
+const ROTATE_SPEED_Z: f32 = 0.05;
 
 #[tokio::main]
 async fn main() {
@@ -17,7 +17,7 @@ async fn main() {
     let mut y_rad = 0.0;
     let mut z_rad = 0.0;
 
-    // print!("\x1b[2J"); // 画面をクリア
+    print!("\x1b[2J"); // 画面をクリア
     loop {
         let mut grid: [[char; WIDTH]; HEIGHT] = [[' '; WIDTH]; HEIGHT];
         let mut z_buffer: [[f32; WIDTH]; HEIGHT] = [[1.0; WIDTH]; HEIGHT];
@@ -38,7 +38,7 @@ async fn main() {
         y_rad += ROTATE_SPEED_Y;
         z_rad += ROTATE_SPEED_Z;
 
-        sleep(Duration::from_secs_f32(0.05)).await;
+        sleep(Duration::from_secs_f32(0.01)).await;
     }
 }
 
@@ -49,26 +49,60 @@ fn update_grid(
     y_rad: f32,
     z_rad: f32,
 ) {
-    let mut i = -40.0;
-    while i <= 40.0 {
-        let x = i;
-        let y = 0.0;
-        let z = 0.0;
+    let mut ch = '@';
 
-        let x_rotated = rotate_x(x, y, z, x_rad, y_rad, z_rad);
-        let y_rotated = rotate_y(x, y, z, x_rad, y_rad, z_rad);
-        let z_rotated = rotate_z(x, y, z, x_rad, y_rad) - DISTANCE_CAM;
+    let mut i = -30.0;
+    while i <= 30.0 {
+        let mut j = -30.0;
+        while j <= 30.0 {
+            let x = i;
+            let y = j;
+            let z = 30.0;
 
-        let x_screen = to_x_screen(x_rotated, z_rotated) as usize;
-        let y_screen = to_y_screen(y_rotated, z_rotated) as usize;
-        let depth = to_z_buffer(z_rotated);
+            let x_rotated = rotate_x(x, y, z, x_rad, y_rad, z_rad);
+            let y_rotated = rotate_y(x, y, z, x_rad, y_rad, z_rad);
+            let z_rotated = rotate_z(x, y, z, x_rad, y_rad) - DISTANCE_CAM;
 
-        if depth < z_buffer[y_screen][x_screen] {
-            z_buffer[y_screen][x_screen] = depth;
-            grid[y_screen][x_screen] = '@';
+            let x_screen = to_x_screen(x_rotated, z_rotated) as usize;
+            let y_screen = to_y_screen(y_rotated, z_rotated) as usize;
+            let depth = to_z_buffer(z_rotated);
+
+            if depth < z_buffer[y_screen][x_screen] {
+                z_buffer[y_screen][x_screen] = depth;
+                grid[y_screen][x_screen] = ch;
+            }
+
+            j += 2.0;
         }
+        i += 2.0;
+    }
 
-        i += 0.001;
+    //test
+    let mut ch = ';';
+    let mut i = -30.0;
+    while i <= 30.0 {
+        let mut j = -30.0;
+        while j <= 30.0 {
+            let x = 30.0;
+            let y = j;
+            let z = i;
+
+            let x_rotated = rotate_x(x, y, z, x_rad, y_rad, z_rad);
+            let y_rotated = rotate_y(x, y, z, x_rad, y_rad, z_rad);
+            let z_rotated = rotate_z(x, y, z, x_rad, y_rad) - DISTANCE_CAM;
+
+            let x_screen = to_x_screen(x_rotated, z_rotated) as usize;
+            let y_screen = to_y_screen(y_rotated, z_rotated) as usize;
+            let depth = to_z_buffer(z_rotated);
+
+            if depth < z_buffer[y_screen][x_screen] {
+                z_buffer[y_screen][x_screen] = depth;
+                grid[y_screen][x_screen] = ch;
+            }
+
+            j += 2.0;
+        }
+        i += 2.0;
     }
 }
 
