@@ -3,7 +3,7 @@ use tokio::time::{sleep, Duration};
 const WIDTH: usize = 99;
 const HEIGHT: usize = 31;
 
-const Z_NEAR: f32 = -1.0;
+const Z_NEAR: f32 = -30.0;
 const Z_FAR: f32 = -200.0;
 const DISTANCE_CAM: f32 = 100.0;
 
@@ -20,7 +20,7 @@ async fn main() {
     // print!("\x1b[2J"); // 画面をクリア
     loop {
         let mut grid: [[char; WIDTH]; HEIGHT] = [[' '; WIDTH]; HEIGHT];
-        let mut z_buffer: [[f32; WIDTH]; HEIGHT] = [[10.0; WIDTH]; HEIGHT];
+        let mut z_buffer: [[f32; WIDTH]; HEIGHT] = [[1.0; WIDTH]; HEIGHT];
 
         update_grid(&mut grid, &mut z_buffer, x_rad, y_rad, z_rad);
 
@@ -49,8 +49,8 @@ fn update_grid(
     y_rad: f32,
     z_rad: f32,
 ) {
-    let mut i = -99.5;
-    while i <= 99.5 {
+    let mut i = -40.0;
+    while i <= 40.0 {
         let x = i;
         let y = 0.0;
         let z = 0.0;
