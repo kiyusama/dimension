@@ -9,9 +9,9 @@ const Z_NEAR: f32 = -30.0;
 const Z_FAR: f32 = -300.0;
 const DISTANCE_CAM: f32 = 100.0;
 
-const ROTATE_SPEED_X: f32 = 0.05;
-const ROTATE_SPEED_Y: f32 = 0.04;
-const ROTATE_SPEED_Z: f32 = 0.03;
+const ROTATE_SPEED_X: f32 = 0.03;
+const ROTATE_SPEED_Y: f32 = 0.02;
+const ROTATE_SPEED_Z: f32 = 0.01;
 
 const WORD_ASPECT: f32 = 0.5;
 
@@ -53,8 +53,9 @@ fn update_grid(
     y_rad: f32,
     z_rad: f32,
 ) {
-    render_cube(grid, z_buffer, x_rad, y_rad, z_rad);
+    //render_cube(grid, z_buffer, x_rad, y_rad, z_rad);
     //render_donut(grid, z_buffer, x_rad, y_rad, z_rad);
+    render_sphere(grid, z_buffer, x_rad, y_rad, z_rad);
 }
 
 fn render_cube(
@@ -100,6 +101,66 @@ fn render_donut(
         let y = radius * i.sin();
         let z = 0.0;
         set_surface(grid, z_buffer, x, y, z, x_rad, y_rad, z_rad, ch);
+
+        i += 0.01;
+    }
+}
+
+fn render_sphere(
+    grid: &mut [[char; WIDTH]; HEIGHT],
+    z_buffer: &mut [[f32; WIDTH]; HEIGHT],
+    x_rad: f32,
+    y_rad: f32,
+    z_rad: f32,
+) {
+    let pi = std::f32::consts::PI;
+    let radius = 40.0;
+    let sphere_aspect = 1.5;
+
+    let chars: [char; 12] = ['.', ',', '-', ':', ';', '~', '=', '!', '*', '#', '$', '@'];
+
+    let mut i = 0.0;
+    while i < pi {
+        let mut j = 0.0;
+        while j < 2.0 * pi {
+            let x = radius * i.sin() * j.cos() * sphere_aspect;
+            let y = radius * i.sin() * j.sin();
+            let z = radius * i.cos();
+
+            let x_rotated = rotate_x(x, y, z, x_rad, y_rad, z_rad);
+            let y_rotated = rotate_y(x, y, z, x_rad, y_rad, z_rad);
+            let z_rotated = rotate_z(x, y, z, x_rad, y_rad) - DISTANCE_CAM;
+
+            let light_x = 1.0f32;
+            let light_y = 1.0f32;
+            let light_z = 5.0f32;
+
+            let sphere_square = (x.powi(2) + y.powi(2) + (z + DISTANCE_CAM).powi(2)).sqrt();
+            let light_square = (light_x.powi(2) + light_y.powi(2) + light_z.powi(2)).sqrt();
+
+            let light_nx = light_x / light_square;
+            let light_ny = light_y / light_square;
+            let light_nz = light_z / light_square;
+
+            let light_intensy = (12.0
+                * (light_nx * x_rotated
+                    + light_ny * y_rotated
+                    + light_nz * (z_rotated + DISTANCE_CAM))
+                / sphere_square) as usize;
+
+            let ch;
+            ch = chars[light_intensy];
+
+            let x_screen = to_x_screen(x_rotated, z_rotated) as usize;
+            let y_screen = to_y_screen(y_rotated, z_rotated) as usize;
+            let depth = to_z_buffer(z_rotated);
+
+            if depth < z_buffer[y_screen][x_screen] {
+                z_buffer[y_screen][x_screen] = depth;
+                grid[y_screen][x_screen] = ch;
+            }
+            j += 0.01;
+        }
 
         i += 0.01;
     }
